@@ -1,8 +1,11 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <algorithm>
+#define GCC_COMPILER (defined(__GNUC__) && !defined(__clang__))
+#if GCC_COMPILER
+    #include <bits/stdc++.h>
+#else
+    #include "stdc++.h"
+#endif
+
+
 using namespace std;
 
 
