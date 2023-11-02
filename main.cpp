@@ -2,7 +2,6 @@
 #include "stdc++.h"
 using namespace std;
 
-
 // Estructura de datos para almacenar los datos de cada instancia
 struct instancia {
     int n; // cantidad de puntos de control
