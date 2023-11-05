@@ -3,6 +3,9 @@
 
 using namespace std;
 
+#define sz(lista) (int)lista.size()
+
+
 // Estructura de datos para almacenar los datos de cada instancia
 struct instancia {
     int n; // cantidad de puntos de control
@@ -94,7 +97,7 @@ float calculateTravelTime(nodo nodo1, nodo nodo2){
 // Función para calcular la tiempos total de una ruta
 float calculateTotalTravelTime(std::vector<nodo> waypoints){
     float total_time = 0;
-    for (int i = 0; i < waypoints.size()-1; i++){
+    for (int i = 0; i < sz(waypoints)-1; i++){
         total_time += calculateTravelTime(waypoints[i], waypoints[i+1]);
     }
     return total_time;
@@ -103,7 +106,7 @@ float calculateTotalTravelTime(std::vector<nodo> waypoints){
 // Función para calcular el puntaje total de una ruta
 int calculateTotalScore(std::vector<nodo> waypoints){
     int total_score = 0;
-    for (int i = 0; i < waypoints.size(); i++){
+    for (int i = 0; i < sz(waypoints); i++){
         total_score += waypoints[i].s;
     }
     return total_score;
@@ -115,7 +118,7 @@ int calculateTotalScore(std::vector<nodo> waypoints){
 float evaluate(std::vector<ruta> rutas, instancia inst){
     float total_score = 0;
     float total_time = 0;
-    for (int i = 0; i < rutas.size(); i++){
+    for (int i = 0; i < sz(rutas); i++){
         total_score += calculateTotalScore(rutas[i].waypoints);
         total_time += calculateTotalTravelTime(rutas[i].waypoints);
     }
@@ -140,26 +143,26 @@ std::vector<ruta> greedy(instancia inst, std::vector<nodo> nodos_iniciales){
 
     // Creamos un vector de nodos disponibles
     std::vector<nodo> nodos_disponibles;
-    for (int i = 1; i < nodos_iniciales.size(); i++){
+    for (int i = 1; i < sz(nodos_iniciales)-1; i++){
         nodos_disponibles.push_back(nodos_iniciales[i]);
     }
 
 
     // Agregamos los nodos a las rutas hasta el nodo n-1
-    for (int i = 0; i < nodos_iniciales.size()-1; i++){
+    for (int i = 0; i < sz(nodos_iniciales)-1; i++){
         // Recorremos cada ruta
         for (int j = 0;j<inst.m;j++){
             int puntaje_max = 0;
             int indice_max = 0;
             // Recorremos cada nodo disponible
-            for (int k = 0; k < nodos_disponibles.size(); k++){
+            for (int k = 0; k < sz(nodos_disponibles); k++){
 
                 // Definimos la posible solución
                 std::vector<nodo> posible_solucion = rutas[j].waypoints;
                 posible_solucion.push_back(nodos_disponibles[k]);
 
                 // Agregamos el nodo final al final de la ruta
-                posible_solucion.push_back(nodos_iniciales[nodos_iniciales.size()-1]);
+                posible_solucion.push_back(nodos_iniciales[sz(nodos_iniciales)-1]);
 
                 // Evaluamos la posible solución
                 float puntaje = evaluate({{posible_solucion, 0}}, inst);
@@ -181,12 +184,11 @@ std::vector<ruta> greedy(instancia inst, std::vector<nodo> nodos_iniciales){
     }
 
     // Agregamos el nodo n a cada ruta si es que no está
-    for (int i = 0; i < rutas.size(); i++){
-        if (rutas[i].waypoints[rutas[i].waypoints.size()-1].id != nodos_iniciales[nodos_iniciales.size()-1].id){
-            rutas[i].waypoints.push_back(nodos_iniciales[nodos_iniciales.size()-1]);
+    for (int i = 0; i < sz(rutas); i++){
+        if (rutas[i].waypoints[sz(rutas[i].waypoints)-1].id != nodos_iniciales[sz(nodos_iniciales)-1].id){
+            rutas[i].waypoints.push_back(nodos_iniciales[sz(nodos_iniciales)-1]);
         }
     }
-
     return rutas;
 }
 
@@ -207,7 +209,7 @@ int main(){
     printf("---------------------------------------------------------------\n");
     printf("Nodos iniciales:\n");
     printf("---------------------------------------------------------------\n");
-    for (int i = 0; i < nodos_iniciales.size(); i++){
+    for (int i = 0; i < sz(nodos_iniciales); i++){
         printf("id: %d, x: %f, y: %f, s: %d\n", nodos_iniciales[i].id, nodos_iniciales[i].x, nodos_iniciales[i].y, nodos_iniciales[i].s);
     }
     printf("---------------------------------------------------------------\n");
@@ -215,11 +217,11 @@ int main(){
     printf("---------------------------------------------------------------\n");
     std::vector<ruta> rutas = greedy(inst, nodos_iniciales);
     float puntaje_total = 0;
-    for (int i = 0; i < rutas.size(); i++){
+    for (int i = 0; i < sz(rutas); i++){
         printf("RUTA %d\n", i+1);
         printf("Waypoints:\n");
         printf("    id: %d, x: %f, y: %f, s: %d, t: -- \n", rutas[i].waypoints[0].id, rutas[i].waypoints[0].x, rutas[i].waypoints[0].y, rutas[i].waypoints[0].s);
-        for (int j = 1; j < rutas[i].waypoints.size(); j++){
+        for (int j = 1; j < sz(rutas[i].waypoints); j++){
             printf("    id: %d, x: %f, y: %f, s: %d, t: %f\n", rutas[i].waypoints[j].id, rutas[i].waypoints[j].x, rutas[i].waypoints[j].y, rutas[i].waypoints[j].s, calculateTravelTime(rutas[i].waypoints[j], rutas[i].waypoints[j-1]));
         }
         printf("Puntaje: %d\n", rutas[i].puntaje);
