@@ -1,5 +1,6 @@
 //#include <bits/stdc++.h>
 #include "stdc++.h"
+
 using namespace std;
 
 // Estructura de datos para almacenar los datos de cada instancia
@@ -109,8 +110,23 @@ int calculateTotalScore(std::vector<nodo> waypoints){
 }
 
 
+// Función de Evaluación (calcular el puntaje total de todas las rutas 
+// y penalizar si se excede el tiempo límite)
+float evaluate(std::vector<ruta> rutas, instancia inst){
+    float total_score = 0;
+    float total_time = 0;
+    for (int i = 0; i < rutas.size(); i++){
+        total_score += calculateTotalScore(rutas[i].waypoints);
+        total_time += calculateTotalTravelTime(rutas[i].waypoints);
+    }
+    if (total_time > inst.tmax){
+        total_score -= 10000;
+    }
+    return total_score;
+}
 
-// Función para crear una solución inicial con Greedy (seleccionando el nodo que más puntaje aporta a cada ruta)
+
+// Función para crear una solución inicial con Greedy
 std::vector<ruta> greedy(instancia inst, std::vector<nodo> nodos_iniciales){
     std::vector<ruta> rutas;
 
@@ -138,19 +154,19 @@ std::vector<ruta> greedy(instancia inst, std::vector<nodo> nodos_iniciales){
             // Recorremos cada nodo disponible
             for (int k = 0; k < nodos_disponibles.size(); k++){
 
-                // Calculamos el puntaje de la ruta si esque se agrega el nodo k
-                int puntaje_actual = rutas[j].puntaje + nodos_disponibles[k].s;
+                // Definimos la posible solución
+                std::vector<nodo> posible_solucion = rutas[j].waypoints;
+                posible_solucion.push_back(nodos_disponibles[k]);
 
-                // Calculamos el tiempo de la ruta si esque se agrega el nodo k
-                float tiempo_actual = calculateTotalTravelTime(rutas[j].waypoints) + calculateTravelTime(rutas[j].waypoints[rutas[j].waypoints.size()-1], nodos_disponibles[k]);
-                
-                // Calculamos el tiempo entre el nodo k y el nodo final
-                float tiempo_nodo_final = calculateTravelTime(nodos_disponibles[k], nodos_iniciales[nodos_iniciales.size()-1]);
-                
-                // Si el puntaje es mayor al máximo y el tiempo de la ruta es menor al tiempo límite, 
-                // actualizamos el puntaje máximo y el índice máximo
-                if (puntaje_actual > puntaje_max && tiempo_actual+tiempo_nodo_final <= inst.tmax){ 
-                    puntaje_max = puntaje_actual;
+                // Agregamos el nodo final al final de la ruta
+                posible_solucion.push_back(nodos_iniciales[nodos_iniciales.size()-1]);
+
+                // Evaluamos la posible solución
+                float puntaje = evaluate({{posible_solucion, 0}}, inst);
+
+                // Si el puntaje es mayor al máximo, actualizamos el puntaje máximo y el índice máximo
+                if (puntaje > puntaje_max){ 
+                    puntaje_max = puntaje;
                     indice_max = k;
                 }
             }
@@ -164,20 +180,20 @@ std::vector<ruta> greedy(instancia inst, std::vector<nodo> nodos_iniciales){
         }
     }
 
-    // Agregamos el nodo n al final de cada ruta (si es que no está) y actualizamos el puntaje
+    // Agregamos el nodo n a cada ruta si es que no está
     for (int i = 0; i < rutas.size(); i++){
         if (rutas[i].waypoints[rutas[i].waypoints.size()-1].id != nodos_iniciales[nodos_iniciales.size()-1].id){
             rutas[i].waypoints.push_back(nodos_iniciales[nodos_iniciales.size()-1]);
-            rutas[i].puntaje += nodos_iniciales[nodos_iniciales.size()-1].s;
         }
     }
+
     return rutas;
 }
 
 
 int main(){
 
-    string nombre_ruta = "instancias/Set_21/p2.2.a.txt";
+    string nombre_ruta = "instancias/Set_21/p2.2.b.txt";
 
     instancia inst = leer_instancia(nombre_ruta);
     vector<nodo> nodos_iniciales = crear_nodos(inst);

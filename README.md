@@ -14,3 +14,15 @@ Para compilar:
 Para ejecutar:
 
     ./main.o
+
+Se debe tener los archivos con las instancias en una carpeta llamada `instancias`. Para seleccionar  que archivo abrir se debe cambiar el nombre del archivo en la linea 196 del archivo `main.cpp`:
+    
+        string nombre_ruta = "instancias/Set_21/p2.2.b.txt";
+
+    
+Se debe tener en cuanta que se importa el archivo "stdc++.h" para poder utilizar las librearias de C++. En el caso de no poder importar el archivo se debe descomeentar la linea 1 del archivo `main.cpp` y comentar la linea 2 del mismo archivo.
+
+    #include <bits/stdc++.h>
+    //#include "stdc++.h"
+
+
