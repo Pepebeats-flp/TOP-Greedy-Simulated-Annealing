@@ -1,5 +1,7 @@
 //#include <bits/stdc++.h>
 #include "stdc++.h"
+#include<stdlib.h>
+#include<time.h>
 
 using namespace std;
 
@@ -13,7 +15,7 @@ struct instancia {
     float tmax; // tiempo límite
     vector<float> x; // coordenadas x de los puntos de control
     vector<float> y; // coordenadas y de los puntos de control
-    vector<int> s; // puntaje de cada punto de control (s_i) i = 1, ..., n
+    vector<int> s; // puntaje de cada punto de control (s_i) i = 1, ..., n};
 };
 
 // Estructura de datos para almacenar los datos de cada nodo
@@ -193,6 +195,59 @@ std::vector<ruta> greedy(instancia inst, std::vector<nodo> nodos_iniciales){
 }
 
 
+//Swap con nodos no ocupados aleatoriamiente
+std::vector<ruta> swap(instancia inst, std::vector<nodo> nodos_iniciales, std::vector<ruta> rutas){
+
+    // Creamos un vector de nodos disponibles
+    std::vector<nodo> nodos_disponibles;
+    for (int i = 0; i < sz(rutas); i++){
+        for (int j = 0; j < sz(rutas[i].waypoints); j++){
+            for (int k = 0; k < sz(nodos_iniciales); k++){
+                if (rutas[i].waypoints[j].id == nodos_iniciales[k].id){
+                    nodos_iniciales.erase(nodos_iniciales.begin()+k);
+                }
+            }
+        }
+    }
+
+    srand(time(NULL));
+
+    bool flag = true;
+    while(flag){
+    
+        // Elegimos un nodo aleatorio de los disponibles
+        int id_nodo = rand() % sz(nodos_iniciales);
+
+        // Elegimos una ruta aleatoria
+        int id_ruta = rand() % sz(rutas);
+
+        // Definimos la posible solución
+        std::vector<nodo> posible_solucion = rutas[id_ruta].waypoints;
+
+        // Elegimos un waypoint aleatorio de la ruta que no sea el inicial ni el final
+        int id_waypoint = rand() % (sz(posible_solucion)-2) + 1;
+
+        // Agregamos el nodo en el waypoint elegido
+        posible_solucion.insert(posible_solucion.begin()+id_waypoint, nodos_iniciales[id_nodo]);
+
+        // Eliminamos el nodo que estaba en el waypoint+1
+        posible_solucion.erase(posible_solucion.begin()+id_waypoint+1);
+
+        // Revisamos si la solución es factible
+        float puntaje = evaluate({{posible_solucion, 0}}, inst);
+
+        if (puntaje > 0){
+            rutas[id_ruta].waypoints = posible_solucion;
+            rutas[id_ruta].puntaje = calculateTotalScore(posible_solucion);
+            nodos_iniciales.erase(nodos_iniciales.begin()+id_nodo);
+            printf("Ruta %d, Nodo ID %d, Waypoint %d\n", id_ruta+1, id_nodo+2, id_waypoint+1);
+            return rutas;
+        }
+    }
+    return rutas;
+}
+
+
 int main(){
 
     string nombre_ruta = "instancias/Set_21/p2.2.b.txt";
@@ -213,7 +268,7 @@ int main(){
         printf("id: %d, x: %f, y: %f, s: %d\n", nodos_iniciales[i].id, nodos_iniciales[i].x, nodos_iniciales[i].y, nodos_iniciales[i].s);
     }
     printf("---------------------------------------------------------------\n");
-    printf("Solución inicial:\n");
+    printf("Solución inicial (Greedy):\n");
     printf("---------------------------------------------------------------\n");
     std::vector<ruta> rutas = greedy(inst, nodos_iniciales);
     float puntaje_total = 0;
@@ -229,12 +284,32 @@ int main(){
         puntaje_total += rutas[i].puntaje;
     printf("---------------------------------------------------------------\n");
     }
-    printf("Puntaje total: %d\n", (int)round(puntaje_total));
+    printf("    Puntaje total: %d\n", (int)round(puntaje_total));
+    printf("---------------------------------------------------------------\n");
+
+    printf("Solución con Swap:\n");
+    printf("---------------------------------------------------------------\n");
+    
+    rutas = swap(inst, nodos_iniciales, rutas);
+    printf("Solución final:\n");
+
+    puntaje_total = 0;
+    
+    for (int i = 0; i < sz(rutas); i++){
+        printf("RUTA %d\n", i+1);
+        printf("Waypoints:\n");
+        printf("    id: %d, x: %f, y: %f, s: %d, t: -- \n", rutas[i].waypoints[0].id, rutas[i].waypoints[0].x, rutas[i].waypoints[0].y, rutas[i].waypoints[0].s);
+        for (int j = 1; j < sz(rutas[i].waypoints); j++){
+            printf("    id: %d, x: %f, y: %f, s: %d, t: %f\n", rutas[i].waypoints[j].id, rutas[i].waypoints[j].x, rutas[i].waypoints[j].y, rutas[i].waypoints[j].s, calculateTravelTime(rutas[i].waypoints[j], rutas[i].waypoints[j-1]));
+        }
+        printf("Puntaje: %d\n", rutas[i].puntaje);
+        printf("Tiempo: %f\n", calculateTotalTravelTime(rutas[i].waypoints));
+        puntaje_total += rutas[i].puntaje;
+    printf("---------------------------------------------------------------\n");
+    }
+    printf("    Puntaje total: %d\n", (int)round(puntaje_total));
     printf("---------------------------------------------------------------\n");
 
     return 0;
 }
-
-
-
 
