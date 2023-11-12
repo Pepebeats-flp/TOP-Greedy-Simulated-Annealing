@@ -87,11 +87,7 @@ vector<nodo> crear_nodos(instancia inst){
 
 // Función para calcular la tiempos entre dos puntos (pitágoras)
 float calculateTravelTime(nodo nodo1, nodo nodo2){
-    float x1 = nodo1.x;
-    float y1 = nodo1.y;
-    float x2 = nodo2.x;
-    float y2 = nodo2.y;
-    float distancia = sqrt(pow(x2-x1, 2) + pow(y2-y1, 2));
+    float distancia = sqrt(pow(nodo1.x-nodo2.x, 2) + pow(nodo1.y-nodo2.y, 2));
     return distancia;
 }
 
@@ -99,8 +95,8 @@ float calculateTravelTime(nodo nodo1, nodo nodo2){
 // Función para calcular la tiempos total de una ruta
 float calculateTotalTravelTime(std::vector<nodo> waypoints){
     float total_time = 0;
-    for (int i = 0; i < sz(waypoints)-1; i++){
-        total_time += calculateTravelTime(waypoints[i], waypoints[i+1]);
+    for (int i = 1; i < sz(waypoints); i++){
+        total_time += calculateTravelTime(waypoints[i], waypoints[i-1]);
     }
     return total_time;
 }
@@ -119,14 +115,16 @@ int calculateTotalScore(std::vector<nodo> waypoints){
 // y penalizar si se excede el tiempo límite)
 float evaluate(std::vector<ruta> rutas, instancia inst){
     float total_score = 0;
-    float total_time = 0;
     for (int i = 0; i < sz(rutas); i++){
         total_score += calculateTotalScore(rutas[i].waypoints);
-        total_time += calculateTotalTravelTime(rutas[i].waypoints);
     }
-    if (total_time > inst.tmax){
-        total_score -= 10000;
+
+    for (int i = 0; i < sz(rutas); i++){
+        if (calculateTotalTravelTime(rutas[i].waypoints) > inst.tmax){
+            total_score -= 1000000;
+        }
     }
+
     return total_score;
 }
 
@@ -149,30 +147,45 @@ std::vector<ruta> greedy(instancia inst, std::vector<nodo> nodos_iniciales){
         nodos_disponibles.push_back(nodos_iniciales[i]);
     }
 
-
-    // Agregamos los nodos a las rutas hasta el nodo n-1
-    for (int i = 0; i < sz(nodos_iniciales)-1; i++){
+    // Recorremos cada nodo 
+    for (int i = 1; i < sz(nodos_iniciales)-1; i++){
         // Recorremos cada ruta
         for (int j = 0;j<inst.m;j++){
             int puntaje_max = 0;
             int indice_max = 0;
+            float distancia_max = 0;
             // Recorremos cada nodo disponible
             for (int k = 0; k < sz(nodos_disponibles); k++){
 
                 // Definimos la posible solución
                 std::vector<nodo> posible_solucion = rutas[j].waypoints;
+
+                // Agregamos el nodo disponible al final de la ruta
                 posible_solucion.push_back(nodos_disponibles[k]);
 
-                // Agregamos el nodo final al final de la ruta
+                // Distancia entre el último nodo de la ruta y el penúltimo
+                float distancia = calculateTravelTime(posible_solucion[sz(posible_solucion)-1], posible_solucion[sz(posible_solucion)-2]);
+                
+
+                // Agregamos el nodo final (n) al final de la ruta
                 posible_solucion.push_back(nodos_iniciales[sz(nodos_iniciales)-1]);
 
                 // Evaluamos la posible solución
                 float puntaje = evaluate({{posible_solucion, 0}}, inst);
 
-                // Si el puntaje es mayor al máximo, actualizamos el puntaje máximo y el índice máximo
-                if (puntaje > puntaje_max){ 
+                // Si la distancia es menor a la distancia máxima y el puntaje es mayor a 0
+                // actualizamos el puntaje máximo y el índice máximo
+                if (distancia < distancia_max && puntaje > 0){
                     puntaje_max = puntaje;
                     indice_max = k;
+                    distancia_max = distancia;
+                }
+                // Si la distancia es mayor a la distancia máxima y el puntaje es mayor a 0
+                // actualizamos el puntaje máximo y el índice máximo
+                else if (distancia > distancia_max && puntaje > 0){
+                    puntaje_max = puntaje;
+                    indice_max = k;
+                    distancia_max = distancia;
                 }
             }
             // Si el puntaje máximo es mayor a 0, agregamos el nodo al final de la ruta
@@ -196,8 +209,8 @@ std::vector<ruta> greedy(instancia inst, std::vector<nodo> nodos_iniciales){
 
 
 //Swap con nodos no ocupados aleatoriamiente
-std::vector<ruta> swap(instancia inst, std::vector<nodo> nodos_iniciales, std::vector<ruta> rutas){
-
+std::vector<ruta>swap(instancia inst, std::vector<nodo> nodos_iniciales, std::vector<ruta> rutas){
+   
     // Creamos un vector de nodos disponibles
     std::vector<nodo> nodos_disponibles;
     for (int i = 0; i < sz(rutas); i++){
@@ -240,17 +253,61 @@ std::vector<ruta> swap(instancia inst, std::vector<nodo> nodos_iniciales, std::v
             rutas[id_ruta].waypoints = posible_solucion;
             rutas[id_ruta].puntaje = calculateTotalScore(posible_solucion);
             nodos_iniciales.erase(nodos_iniciales.begin()+id_nodo);
-            printf("Ruta %d, Nodo ID %d, Waypoint %d\n", id_ruta+1, id_nodo+2, id_waypoint+1);
             return rutas;
         }
     }
     return rutas;
 }
 
+// Función que define la función de enfriamiento
+float func_enfriamiento(float temp){
+    return temp*0.99;
+}
+
+// Función que define si se acepta o no una solución
+bool accept(float delta, float temp){
+    if (delta > 0){
+        delta = delta*(-1);
+    }
+    float prob = exp(delta/temp);
+    float random = (float)rand()/(float)RAND_MAX;
+    if (random < prob){
+        return true;
+    }
+    return false;
+}
+
+
+// Función para ejecutar un algoritmo de Simulated Annealing
+std::vector<vector<ruta>> simulated_annealing(instancia inst, std::vector<nodo> nodos_iniciales, std::vector<ruta> rutas, float temp0, int n_iter){
+    float temp = temp0;
+    float delta = 0;
+    float puntaje_actual = evaluate(rutas, inst);
+    float puntaje_nuevo = 0;
+    std::vector<ruta> best_rutas = rutas;
+    std::vector<ruta> rutas_nuevas;
+    for (int i = 0; i < n_iter; i++){
+        rutas_nuevas = swap(inst, nodos_iniciales, rutas);
+        puntaje_nuevo = evaluate(rutas_nuevas, inst);
+        delta = puntaje_nuevo - puntaje_actual;
+        if (puntaje_actual > 0){
+            if (accept(delta, temp)){
+                rutas = rutas_nuevas;
+                puntaje_actual = puntaje_nuevo;
+                if (puntaje_actual > evaluate(best_rutas, inst)){
+                    best_rutas = rutas;
+                }
+            }
+        }
+        temp = func_enfriamiento(temp);
+    }
+    return {best_rutas, rutas_nuevas};
+}
+
 
 int main(){
 
-    string nombre_ruta = "instancias/Set_21/p2.2.b.txt";
+    string nombre_ruta = "instancias/Set_21/p2.3.d.txt";
 
     instancia inst = leer_instancia(nombre_ruta);
     vector<nodo> nodos_iniciales = crear_nodos(inst);
@@ -287,29 +344,48 @@ int main(){
     printf("    Puntaje total: %d\n", (int)round(puntaje_total));
     printf("---------------------------------------------------------------\n");
 
-    printf("Solución con Swap:\n");
-    printf("---------------------------------------------------------------\n");
-    
-    rutas = swap(inst, nodos_iniciales, rutas);
-    printf("Solución final:\n");
-
-    puntaje_total = 0;
-    
-    for (int i = 0; i < sz(rutas); i++){
-        printf("RUTA %d\n", i+1);
-        printf("Waypoints:\n");
-        printf("    id: %d, x: %f, y: %f, s: %d, t: -- \n", rutas[i].waypoints[0].id, rutas[i].waypoints[0].x, rutas[i].waypoints[0].y, rutas[i].waypoints[0].s);
-        for (int j = 1; j < sz(rutas[i].waypoints); j++){
-            printf("    id: %d, x: %f, y: %f, s: %d, t: %f\n", rutas[i].waypoints[j].id, rutas[i].waypoints[j].x, rutas[i].waypoints[j].y, rutas[i].waypoints[j].s, calculateTravelTime(rutas[i].waypoints[j], rutas[i].waypoints[j-1]));
-        }
-        printf("Puntaje: %d\n", rutas[i].puntaje);
-        printf("Tiempo: %f\n", calculateTotalTravelTime(rutas[i].waypoints));
-        puntaje_total += rutas[i].puntaje;
-    printf("---------------------------------------------------------------\n");
-    }
-    printf("    Puntaje total: %d\n", (int)round(puntaje_total));
+    printf("Simulated Annealing ...\n");
     printf("---------------------------------------------------------------\n");
 
+    // Definimos la temperatura inicial respecto a la cantidad de nodos
+    float temp0_inst = inst.n*10;
+
+    // Definimos la temperatura inicial respecto a la cantidad de rutas
+    float temp0_rutas = inst.m*10;
+
+    // Definimos la temperatura inicial respecto al tiempo límite
+    float temp0_tmax = inst.tmax*10;
+
+
+    int n_iter = 1000;
+
+    std::vector<vector<ruta>> rutas_inst = simulated_annealing(inst, nodos_iniciales, rutas, temp0_inst, n_iter);
+    std::vector<vector<ruta>> rutas_rutas = simulated_annealing(inst, nodos_iniciales, rutas, temp0_rutas, n_iter);
+    std::vector<vector<ruta>> rutas_tmax = simulated_annealing(inst, nodos_iniciales, rutas, temp0_tmax, n_iter);
+
+    printf("---------------------------------------------------------------\n");
+
+    printf("Puntajes Finales (Simulated Annealing):\n");
+    printf("---------------------------------------------------------------\n");
+
+    printf("Temperatura inicial: %f\n", temp0_inst);
+    printf("Puntaje total Best: %f\n", evaluate(rutas_inst[0], inst));
+    printf("Puntaje total Final: %f\n", evaluate(rutas_inst[1], inst));
+
+    printf("---------------------------------------------------------------\n");
+
+    printf("Temperatura inicial: %f\n", temp0_rutas);
+    printf("Puntaje total Best: %f\n", evaluate(rutas_rutas[0], inst));
+    printf("Puntaje total Final: %f\n", evaluate(rutas_rutas[1], inst));
+
+    printf("---------------------------------------------------------------\n");
+
+    printf("Temperatura inicial: %f\n", temp0_tmax);
+    printf("Puntaje total Best: %f\n", evaluate(rutas_tmax[0], inst));
+    printf("Puntaje total Final: %f\n", evaluate(rutas_tmax[1], inst));
+    
+    printf("---------------------------------------------------------------\n");
+    
     return 0;
 }
 
