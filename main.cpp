@@ -3,6 +3,12 @@
 #include<stdlib.h>
 #include<time.h>
 
+// semilla para generar números aleatorios
+int seed = 0;
+
+// contador de evaluaciones
+int cont_eval = 0;
+
 using namespace std;
 
 #define sz(lista) (int)lista.size()
@@ -37,7 +43,7 @@ struct ruta{
 instancia leer_instancia(string nombre_ruta){
     instancia inst;
     ifstream archivo(nombre_ruta.c_str());
-    if (archivo.is_open()){
+    if (archivo.is_open()){ 
         string n, m, tmax;
 
         getline(archivo, n);
@@ -124,6 +130,8 @@ float evaluate(std::vector<ruta> rutas, instancia inst){
             total_score -= 1000000;
         }
     }
+
+    cont_eval++;
 
     return total_score;
 }
@@ -261,7 +269,7 @@ std::vector<ruta>swap(instancia inst, std::vector<nodo> nodos_iniciales, std::ve
 
 // Función que define la función de enfriamiento
 float func_enfriamiento(float temp){
-    return temp*0.99;
+    return temp*0.9;
 }
 
 // Función que define si se acepta o no una solución
@@ -286,28 +294,36 @@ std::vector<vector<ruta>> simulated_annealing(instancia inst, std::vector<nodo> 
     float puntaje_nuevo = 0;
     std::vector<ruta> best_rutas = rutas;
     std::vector<ruta> rutas_nuevas;
+    // Iteramos hasta que llegar al número de iteraciones
     for (int i = 0; i < n_iter; i++){
+        // Ejecutamos el swap
         rutas_nuevas = swap(inst, nodos_iniciales, rutas);
+        // Evaluamos la nueva solución
         puntaje_nuevo = evaluate(rutas_nuevas, inst);
+        // Calculamos el delta
         delta = puntaje_nuevo - puntaje_actual;
+        // Si el puntaje actual es mayor a 0
         if (puntaje_actual > 0){
+            // Calculamos la probabilidad de aceptar la solución
             if (accept(delta, temp)){
+                // Si la solución es aceptada, actualizamos la solución actual
                 rutas = rutas_nuevas;
                 puntaje_actual = puntaje_nuevo;
+                // Si la solución actual es mejor que la mejor solución, actualizamos la mejor solución
                 if (puntaje_actual > evaluate(best_rutas, inst)){
                     best_rutas = rutas;
                 }
             }
         }
+        // Cambiamos la temperatura
         temp = func_enfriamiento(temp);
     }
     return {best_rutas, rutas_nuevas};
 }
 
-
 int main(){
-
-    string nombre_ruta = "instancias/Set_21/p2.3.d.txt";
+    
+    string nombre_ruta = "instancias/Set_21/p2.2.a.txt";
 
     instancia inst = leer_instancia(nombre_ruta);
     vector<nodo> nodos_iniciales = crear_nodos(inst);
@@ -363,29 +379,66 @@ int main(){
     std::vector<vector<ruta>> rutas_rutas = simulated_annealing(inst, nodos_iniciales, rutas, temp0_rutas, n_iter);
     std::vector<vector<ruta>> rutas_tmax = simulated_annealing(inst, nodos_iniciales, rutas, temp0_tmax, n_iter);
 
-    printf("---------------------------------------------------------------\n");
-
     printf("Puntajes Finales (Simulated Annealing):\n");
-    printf("---------------------------------------------------------------\n");
-
-    printf("Temperatura inicial: %f\n", temp0_inst);
-    printf("Puntaje total Best: %f\n", evaluate(rutas_inst[0], inst));
-    printf("Puntaje total Final: %f\n", evaluate(rutas_inst[1], inst));
 
     printf("---------------------------------------------------------------\n");
 
-    printf("Temperatura inicial: %f\n", temp0_rutas);
-    printf("Puntaje total Best: %f\n", evaluate(rutas_rutas[0], inst));
-    printf("Puntaje total Final: %f\n", evaluate(rutas_rutas[1], inst));
+    printf("Temperatura inicial(nodos): %f\n", temp0_inst);
+    float puntaje_best_inst = evaluate(rutas_inst[0], inst);
+    float puntaje_final_inst = evaluate(rutas_inst[1], inst);
+    printf("    Puntaje total Best: %f\n", puntaje_best_inst);
+    printf("    Puntaje total Final: %f\n", puntaje_final_inst);
 
     printf("---------------------------------------------------------------\n");
 
-    printf("Temperatura inicial: %f\n", temp0_tmax);
-    printf("Puntaje total Best: %f\n", evaluate(rutas_tmax[0], inst));
-    printf("Puntaje total Final: %f\n", evaluate(rutas_tmax[1], inst));
+    printf("Temperatura inicial(rutas): %f\n", temp0_rutas);
+    float puntaje_best_rutas = evaluate(rutas_rutas[0], inst);
+    float puntaje_final_rutas = evaluate(rutas_rutas[1], inst);
+    printf("    Puntaje total Best: %f\n", puntaje_best_rutas);
+    printf("    Puntaje total Final: %f\n", puntaje_final_rutas);
+
+    printf("---------------------------------------------------------------\n");
+
+    printf("Temperatura inicial(t_max): %f\n", temp0_tmax);
+    float puntaje_best_tmax = evaluate(rutas_tmax[0], inst);
+    float puntaje_final_tmax = evaluate(rutas_tmax[1], inst);
+    printf("    Puntaje total Best: %f\n", puntaje_best_tmax);
+    printf("    Puntaje total Final: %f\n", puntaje_final_tmax);
     
+    printf("---------------------------------------------------------------\n");
+
+    ofstream archivo_solucion("solution.txt");
+
+    float puntaje_best = puntaje_best_inst;
+    std::vector<ruta> rutas_best = rutas_inst[0];
+
+    if (puntaje_best_rutas > puntaje_best){
+        puntaje_best = puntaje_best_rutas;
+        rutas_best = rutas_rutas[0];
+    }
+
+    if (puntaje_best_tmax > puntaje_best){
+        puntaje_best = puntaje_best_tmax;
+        rutas_best = rutas_tmax[0];
+    }
+    
+    archivo_solucion << puntaje_best << endl;
+
+    for (int i = 0; i < sz(rutas_best); i++){
+        archivo_solucion << rutas_best[i].puntaje << "\t";
+        for (int j = 0; j < sz(rutas_best[i].waypoints); j++){
+            archivo_solucion << rutas_best[i].waypoints[j].id << "\t";
+        }
+        archivo_solucion << endl;
+    }
+    
+    archivo_solucion.close();
+
+    printf("Solución Final:\n");
+    printf("---------------------------------------------------------------\n");
+    printf("    Puntaje total: %f\n", puntaje_best);
+    printf("    Numero de evaluaciones: %d\n", cont_eval);
     printf("---------------------------------------------------------------\n");
     
     return 0;
 }
-
